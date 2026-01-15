@@ -23,7 +23,7 @@ A minimal macOS menubar app for starting and stopping attendance tracking in Per
 
 ## Installation
 
-### Via Homebrew (Recommended)
+### Via Homebrew (Not yet supported)
 
 ```bash
 # Add the tap
