@@ -6,10 +6,12 @@ A minimal macOS menubar app for starting and stopping attendance tracking in Per
 
 - Lives in your menubar (no dock icon)
 - One-click Start/Stop attendance tracking
-- Optional live timer display
+- Optional live timer display in menubar
 - Today's total tracked time
+- Status indicator showing configuration and connection state
 - Automatic state recovery after restart
-- Midnight boundary handling (auto-stops to prevent cross-day entries)
+- Auto-opens setup on first launch
+- Connection test to validate API credentials
 - Secure credential storage in macOS Keychain
 
 ## Requirements
@@ -24,8 +26,8 @@ A minimal macOS menubar app for starting and stopping attendance tracking in Per
 ### Via Homebrew (Recommended)
 
 ```bash
-# Add the tap (replace with actual tap name)
-brew tap yourusername/tap
+# Add the tap
+brew tap timae/tap
 
 # Install
 brew install --cask personio-timer
@@ -33,26 +35,23 @@ brew install --cask personio-timer
 
 ### Manual Installation
 
-1. Download the latest release from [Releases](https://github.com/yourusername/personio-timer/releases)
+1. Download the latest release from [Releases](https://github.com/timae/Personio-Timer/releases)
 2. Unzip and drag `PersonioTimer.app` to `/Applications`
 3. Launch from Applications or Spotlight
 
 ## Setup
 
-1. Launch PersonioTimer
-2. Click the clock icon in the menubar
-3. Select **Preferences...**
-4. Enter your credentials:
+1. Launch PersonioTimer - Preferences window opens automatically on first launch
+2. Enter your credentials:
    - **Client ID**: From Personio API settings
    - **Client Secret**: From Personio API settings
    - **Employee ID**: Your numeric employee ID
-5. Click **Validate Credentials** to test
-6. Click **Save**
+3. Click **Test Connection** to verify everything works
+4. Click **Save**
 
 ### Getting API Credentials
 
 1. Log into Personio
-papi-b5d5f2de-0ba9-4541-8e0b-0f15ed3af793
 2. Go to **Settings** > **Integrations** > **API credentials**
 3. Create new credentials with attendance read/write permissions
 4. Copy the Client ID and Client Secret
@@ -79,32 +78,36 @@ https://yourcompany.personio.de/staff/employees/12345
 ## Menu Items
 
 ```
-┌─────────────────────┐
-│ ⏱ Start / Stop      │  ← Primary action
-├─────────────────────┤
-│ Today: 4h 32m       │  ← Total tracked today
-├─────────────────────┤
-│ Sync Now            │
-│ Open Personio       │
-├─────────────────────┤
-│ Preferences...      │
-│ Quit PersonioTimer  │
-└─────────────────────┘
+┌─────────────────────────┐
+│ Status: Ready (ID: 123) │  ← Connection/config status
+├─────────────────────────┤
+│ Start / Stop            │  ← Primary action
+│ Today: 4h 32m           │  ← Total tracked today
+├─────────────────────────┤
+│ Sync Now                │
+│ Open Personio           │
+├─────────────────────────┤
+│ Preferences...          │
+│ Quit PersonioTimer      │
+└─────────────────────────┘
 ```
 
-## Midnight Handling
+### Status Indicator
 
-Personio attendance entries cannot span multiple days. PersonioTimer handles this automatically:
-
-1. If tracking is active at 23:59, the current entry is stopped
-2. If **Auto-restart after midnight** is enabled in Preferences, a new entry starts at 00:00
+The status line shows:
+- **Status: No API credentials** - Credentials not configured
+- **Status: No Employee ID** - Employee ID not set
+- **Status: Ready (ID: xxx)** - Configured and ready to track
+- **Status: Tracking (ID: xxx)** - Currently tracking time
+- **Status: Loading...** - API call in progress
+- **Error: [message]** - Last operation failed
 
 ## Building from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/personio-timer.git
-cd personio-timer/PersonioTimer
+git clone https://github.com/timae/Personio-Timer.git
+cd Personio-Timer/PersonioTimer
 
 # Build with Xcode
 xcodebuild -project PersonioTimer.xcodeproj \
@@ -130,8 +133,7 @@ PersonioTimer/
 │   │   ├── PersonioAPIClient.swift       # HTTP client
 │   │   ├── PersonioModels.swift          # API models
 │   │   ├── TokenCache.swift              # Token storage
-│   │   ├── AttendanceService.swift       # Business logic
-│   │   └── MidnightScheduler.swift       # Day boundary handling
+│   │   └── AttendanceService.swift       # Business logic
 │   ├── Storage/
 │   │   ├── KeychainStore.swift           # Secure credentials
 │   │   └── LocalStateStore.swift         # App state
@@ -161,7 +163,9 @@ PersonioTimer/
 - Try generating new credentials
 
 ### Start button is disabled
+- Check the Status line in the menu for details
 - Open Preferences and configure credentials and Employee ID
+- Use "Test Connection" to verify your setup
 
 ### Timer doesn't resume after restart
 - Check if the previous entry was manually closed in Personio
@@ -170,6 +174,11 @@ PersonioTimer/
 ### App doesn't appear in menubar
 - Check System Settings > Control Center > Menu Bar Only
 - Try quitting and relaunching the app
+
+### Repeated Keychain password prompts (during development)
+- This happens because each rebuild changes the app's code signature
+- Click "Always Allow" when prompted
+- For distribution builds with stable signing, this only happens once
 
 ## License
 
@@ -186,38 +195,45 @@ MIT License - see LICENSE file for details.
 
 ### Test Cases
 
-#### TC1: Initial Setup
-1. [ ] Launch app - should appear in menubar with clock icon
-2. [ ] Click icon - Start should be disabled (not configured)
-3. [ ] Open Preferences
-4. [ ] Enter valid Client ID and Secret
-5. [ ] Click Validate - should show green checkmark
-6. [ ] Enter Employee ID
-7. [ ] Save and close
+#### TC1: Initial Setup (First Launch)
+1. [ ] Launch app for the first time
+2. [ ] Preferences window should open automatically
+3. [ ] Enter valid Client ID, Secret, and Employee ID
+4. [ ] Click "Test Connection"
 
-**Expected**: Start button becomes enabled
+**Expected**: Green checkmark with "Connected! Found X attendance(s) today"
 
-#### TC2: Start Tracking
+#### TC2: Save and Ready State
+1. [ ] After successful connection test, click Save
+2. [ ] Check the menu
+
+**Expected**:
+- Status shows "Status: Ready (ID: xxx)"
+- Start button is enabled
+
+#### TC3: Start Tracking
 1. [ ] Click Start
 2. [ ] Wait for menu to update
 
 **Expected**:
+- Status shows "Status: Tracking (ID: xxx)"
 - Menu shows "Stop" instead of "Start"
 - Menubar icon fills in (clock.fill)
-- Timer appears in menubar (if enabled)
-- Personio web shows new attendance entry
+- Timer appears in menubar (if enabled in preferences)
+- Personio web shows new attendance entry (open, no end time)
 
-#### TC3: Stop Tracking
+#### TC4: Stop Tracking
 1. [ ] With tracking active, click Stop
 2. [ ] Check Personio web
 
 **Expected**:
+- Status shows "Status: Ready (ID: xxx)"
 - Menu shows "Start"
-- Timer disappears
-- Personio entry has end time set
+- Timer disappears from menubar
+- Personio entry now has end time set
 - "Today: Xh Ym" updates
 
-#### TC4: State Recovery
+#### TC5: State Recovery
 1. [ ] Start tracking
 2. [ ] Quit app (Cmd+Q, confirm "Quit Anyway")
 3. [ ] Relaunch app
@@ -227,24 +243,17 @@ MIT License - see LICENSE file for details.
 - Timer continues from original start time
 - No duplicate entry in Personio
 
-#### TC5: Overlap Prevention
-1. [ ] Start tracking in app
-2. [ ] In Personio web, manually create another attendance entry for today
-3. [ ] Stop and try to Start again in app
-
-**Expected**: Error message about overlap (or graceful handling)
-
 #### TC6: Quit with Active Tracking
 1. [ ] Start tracking
 2. [ ] Click Quit PersonioTimer
 
 **Expected**: Dialog offers "Stop and Quit", "Quit Anyway", "Cancel"
 
-#### TC7: Invalid Credentials
+#### TC7: Invalid Credentials Test
 1. [ ] In Preferences, enter wrong Client Secret
-2. [ ] Click Validate
+2. [ ] Click "Test Connection"
 
-**Expected**: Red X with "Invalid" message
+**Expected**: Red X with error message
 
 #### TC8: Sync Today's Total
 1. [ ] Have some completed entries in Personio
@@ -272,18 +281,18 @@ MIT License - see LICENSE file for details.
 2. [ ] Disconnect from network
 3. [ ] Try to Stop
 
-**Expected**: Error message, state preserved for retry
+**Expected**: Error message shown in Status line, state preserved for retry
 
-#### EC2: Midnight Boundary (Manual Test)
-1. [ ] Set system time to 23:58
-2. [ ] Start tracking
-3. [ ] Wait past midnight
+#### EC2: Overlap Prevention
+1. [ ] Start tracking in app
+2. [ ] In Personio web, manually create another attendance entry for today
+3. [ ] Stop and try to Start again in app
 
-**Expected**: Entry auto-stops at 23:59, optionally restarts at 00:00
+**Expected**: Error message about overlap (or graceful handling)
 
 ### Sign-off
 
 - [ ] All TC pass
-- [ ] No credentials in logs (check Console.app)
+- [ ] No credentials in logs (check Console.app, filter by "PersonioTimer")
 - [ ] App uses < 50MB memory
 - [ ] No CPU usage when idle
