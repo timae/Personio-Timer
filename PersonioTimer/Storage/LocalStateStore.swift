@@ -21,7 +21,22 @@ final class LocalStateStore {
         static let apiBaseURL = "apiBaseURL"
         static let timezone = "timezone"
         static let showTimerInMenubar = "showTimerInMenubar"
+        static let menubarDisplayMode = "menubarDisplayMode"
         static let autoRestartAfterMidnight = "autoRestartAfterMidnight"
+    }
+
+    // MARK: - Display Mode
+
+    enum MenubarDisplayMode: String, CaseIterable {
+        case currentSession = "currentSession"
+        case todayTotal = "todayTotal"
+
+        var description: String {
+            switch self {
+            case .currentSession: return "Current session"
+            case .todayTotal: return "Today's total"
+            }
+        }
     }
 
     // MARK: - Employee ID
@@ -130,6 +145,19 @@ final class LocalStateStore {
         }
         set {
             defaults.set(newValue, forKey: Keys.showTimerInMenubar)
+        }
+    }
+
+    var menubarDisplayMode: MenubarDisplayMode {
+        get {
+            guard let rawValue = defaults.string(forKey: Keys.menubarDisplayMode),
+                  let mode = MenubarDisplayMode(rawValue: rawValue) else {
+                return .currentSession  // Default to current session
+            }
+            return mode
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: Keys.menubarDisplayMode)
         }
     }
 

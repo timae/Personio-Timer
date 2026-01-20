@@ -10,9 +10,9 @@ final class PreferencesWindowController: NSWindowController {
         let hostingController = NSHostingController(rootView: preferencesView)
 
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "PersonioTimer Preferences"
+        window.title = "Preferences"
         window.styleMask = [.titled, .closable]
-        window.setContentSize(NSSize(width: 480, height: 440))
+        window.setContentSize(NSSize(width: 420, height: 460))
         window.center()
 
         self.init(window: window)
@@ -32,7 +32,7 @@ struct PreferencesView: View {
     @State private var clientSecret: String = ""
     @State private var employeeIdString: String = ""
     @State private var showTimerInMenubar: Bool = true
-    @State private var autoRestartAfterMidnight: Bool = false
+    @State private var menubarDisplayMode: LocalStateStore.MenubarDisplayMode = .currentSession
 
     @State private var isTestingConnection: Bool = false
     @State private var connectionResult: ValidationResult?
@@ -45,101 +45,130 @@ struct PreferencesView: View {
     }
 
     var body: some View {
-        Form {
-            // API Credentials Section
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("API Credentials")
-                        .font(.headline)
+        VStack(spacing: 0) {
+            // Content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // API Credentials Section
+                    PreferenceSection(title: "API Credentials", icon: "key.fill") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            LabeledField(label: "Client ID") {
+                                TextField("Enter Client ID", text: $clientId)
+                                    .textFieldStyle(.plain)
+                                    .padding(8)
+                                    .background(Color(NSColor.controlBackgroundColor))
+                                    .cornerRadius(6)
+                            }
 
-                    TextField("Client ID", text: $clientId)
-                        .textFieldStyle(.roundedBorder)
+                            LabeledField(label: "Client Secret") {
+                                SecureField("Enter Client Secret", text: $clientSecret)
+                                    .textFieldStyle(.plain)
+                                    .padding(8)
+                                    .background(Color(NSColor.controlBackgroundColor))
+                                    .cornerRadius(6)
+                            }
 
-                    SecureField("Client Secret", text: $clientSecret)
-                        .textFieldStyle(.roundedBorder)
+                            LabeledField(label: "Employee ID") {
+                                TextField("e.g. 12345", text: $employeeIdString)
+                                    .textFieldStyle(.plain)
+                                    .padding(8)
+                                    .background(Color(NSColor.controlBackgroundColor))
+                                    .cornerRadius(6)
+                                    .frame(width: 120)
+                            }
 
-                    Text("Get credentials from Personio: Settings > Integrations > API credentials")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
+                            // Connection Test
+                            HStack(spacing: 12) {
+                                Button(action: testFullConnection) {
+                                    HStack(spacing: 6) {
+                                        if isTestingConnection {
+                                            ProgressView()
+                                                .scaleEffect(0.6)
+                                                .frame(width: 14, height: 14)
+                                        } else {
+                                            Image(systemName: "bolt.fill")
+                                                .font(.system(size: 11))
+                                        }
+                                        Text("Test Connection")
+                                            .font(.system(size: 12, weight: .medium))
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                                .disabled(clientId.isEmpty || clientSecret.isEmpty || employeeIdString.isEmpty || isTestingConnection)
 
-            Divider()
-                .padding(.vertical, 4)
+                                if let result = connectionResult {
+                                    connectionResultView(for: result)
+                                }
 
-            // Employee ID Section
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Employee Settings")
-                        .font(.headline)
-
-                    HStack {
-                        Text("Employee ID:")
-                        TextField("12345", text: $employeeIdString)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 120)
+                                Spacer()
+                            }
+                            .padding(.top, 4)
+                        }
                     }
 
-                    Text("Find your ID in Personio URL: /staff/employees/12345")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Divider()
-                .padding(.vertical, 4)
-
-            // Connection Test Section
-            Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Connection Test")
-                        .font(.headline)
-
-                    HStack(spacing: 12) {
-                        Button(action: testFullConnection) {
-                            HStack {
-                                if isTestingConnection {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                        .frame(width: 16, height: 16)
-                                } else {
-                                    Image(systemName: "network")
+                    // Display Options Section
+                    PreferenceSection(title: "Menubar Display", icon: "menubar.rectangle") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Toggle(isOn: $showTimerInMenubar) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Show timer in menubar")
+                                        .font(.system(size: 13))
+                                    Text("Display time next to the clock icon")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
                                 }
-                                Text("Test Connection")
+                            }
+                            .toggleStyle(.switch)
+
+                            if showTimerInMenubar {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Display mode")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
+
+                                    Picker("", selection: $menubarDisplayMode) {
+                                        ForEach(LocalStateStore.MenubarDisplayMode.allCases, id: \.self) { mode in
+                                            Text(mode.description).tag(mode)
+                                        }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .frame(width: 220)
+
+                                    Text(menubarDisplayMode == .currentSession
+                                         ? "Shows time since tracking started"
+                                         : "Shows total time tracked today")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.leading, 4)
+                                .transition(.opacity)
                             }
                         }
-                        .disabled(clientId.isEmpty || clientSecret.isEmpty || employeeIdString.isEmpty || isTestingConnection)
-                        .buttonStyle(.borderedProminent)
-
-                        if let result = connectionResult {
-                            resultView(for: result)
-                        }
                     }
 
-                    Text("Tests API authentication and verifies Employee ID can access attendance data")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    // Help Section
+                    PreferenceSection(title: "Help", icon: "questionmark.circle.fill") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HelpLink(
+                                text: "Get API credentials from Personio",
+                                detail: "Settings → Integrations → API credentials"
+                            )
+                            HelpLink(
+                                text: "Find your Employee ID",
+                                detail: "Check your profile URL: /staff/employees/ID"
+                            )
+                        }
+                    }
                 }
+                .padding(24)
             }
 
             Divider()
-                .padding(.vertical, 4)
 
-            // Display Options Section
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Display Options")
-                        .font(.headline)
-
-                    Toggle("Show timer in menubar", isOn: $showTimerInMenubar)
-
-                    Toggle("Auto-restart after midnight", isOn: $autoRestartAfterMidnight)
-                }
-            }
-
-            Spacer()
-
-            // Buttons
+            // Footer Buttons
             HStack {
                 Spacer()
 
@@ -153,35 +182,41 @@ struct PreferencesView: View {
                     closeWindow()
                 }
                 .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
                 .disabled(employeeIdString.isEmpty || clientId.isEmpty || clientSecret.isEmpty)
             }
+            .padding(16)
+            .background(Color(NSColor.windowBackgroundColor))
         }
-        .padding(20)
-        .frame(minWidth: 450, minHeight: 420)
+        .frame(width: 420, height: 460)
         .onAppear {
             loadSettings()
         }
     }
 
+    // MARK: - Subviews
+
     @ViewBuilder
-    private func resultView(for result: ValidationResult) -> some View {
+    private func connectionResultView(for result: ValidationResult) -> some View {
         switch result {
         case .success(let message):
             HStack(spacing: 4) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
+                    .font(.system(size: 12))
                 Text(message)
                     .foregroundColor(.green)
-                    .font(.caption)
+                    .font(.system(size: 11))
             }
         case .failure(let message):
             HStack(spacing: 4) {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundColor(.red)
+                    .font(.system(size: 12))
                 Text(message)
                     .foregroundColor(.red)
-                    .font(.caption)
-                    .lineLimit(2)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
             }
         }
     }
@@ -189,59 +224,49 @@ struct PreferencesView: View {
     // MARK: - Settings Management
 
     private func loadSettings() {
-        // Load credentials (if any)
         if let credentials = KeychainStore.shared.loadCredentials() {
             clientId = credentials.clientId
             clientSecret = credentials.clientSecret
         }
 
-        // Load employee ID
         if let empId = LocalStateStore.shared.employeeId {
             employeeIdString = String(empId)
         }
 
-        // Load preferences
         showTimerInMenubar = LocalStateStore.shared.showTimerInMenubar
-        autoRestartAfterMidnight = LocalStateStore.shared.autoRestartAfterMidnight
+        menubarDisplayMode = LocalStateStore.shared.menubarDisplayMode
     }
 
     private func saveSettings() {
-        // Save credentials to Keychain
         if !clientId.isEmpty && !clientSecret.isEmpty {
             _ = KeychainStore.shared.saveCredentials(clientId: clientId, clientSecret: clientSecret)
         }
 
-        // Save employee ID
         if let empId = Int(employeeIdString) {
             LocalStateStore.shared.employeeId = empId
         }
 
-        // Save preferences
         LocalStateStore.shared.showTimerInMenubar = showTimerInMenubar
-        LocalStateStore.shared.autoRestartAfterMidnight = autoRestartAfterMidnight
+        LocalStateStore.shared.menubarDisplayMode = menubarDisplayMode
 
         logger.info("Settings saved")
-
-        // Notify that preferences were saved so menu can refresh
         NotificationCenter.default.post(name: .preferencesDidSave, object: nil)
     }
 
     private func testFullConnection() {
         guard !clientId.isEmpty, !clientSecret.isEmpty, !employeeIdString.isEmpty else { return }
         guard let employeeId = Int(employeeIdString) else {
-            connectionResult = .failure("Invalid Employee ID format")
+            connectionResult = .failure("Invalid Employee ID")
             return
         }
 
         isTestingConnection = true
         connectionResult = nil
 
-        // Save credentials temporarily for testing
         _ = KeychainStore.shared.saveCredentials(clientId: clientId, clientSecret: clientSecret)
 
         Task {
             do {
-                // Step 1: Test authentication
                 logger.info("Testing API authentication...")
                 let isValid = try await PersonioAPIClient.shared.validateCredentials()
 
@@ -253,25 +278,23 @@ struct PreferencesView: View {
                     return
                 }
 
-                // Step 2: Test fetching attendances for the employee
                 logger.info("Testing attendance access for employee \(employeeId)...")
                 let attendances = try await PersonioAPIClient.shared.getTodayAttendances(employeeId: employeeId)
 
                 await MainActor.run {
                     isTestingConnection = false
-                    let count = attendances.count
-                    connectionResult = .success("Connected! Found \(count) attendance(s) today")
+                    connectionResult = .success("Connected (\(attendances.count) entries today)")
                 }
             } catch let error as PersonioAPIError {
                 await MainActor.run {
                     isTestingConnection = false
                     switch error {
                     case .invalidCredentials:
-                        connectionResult = .failure("Invalid API credentials")
-                    case .networkError(let underlying):
-                        connectionResult = .failure("Network error: \(underlying.localizedDescription)")
+                        connectionResult = .failure("Invalid credentials")
+                    case .networkError:
+                        connectionResult = .failure("Network error")
                     case .apiError(let message):
-                        connectionResult = .failure("API error: \(message)")
+                        connectionResult = .failure(message)
                     default:
                         connectionResult = .failure(error.localizedDescription)
                     }
@@ -287,6 +310,58 @@ struct PreferencesView: View {
 
     private func closeWindow() {
         NSApp.keyWindow?.close()
+    }
+}
+
+// MARK: - Helper Views
+
+struct PreferenceSection<Content: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.accentColor)
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+
+            content
+                .padding(.leading, 2)
+        }
+    }
+}
+
+struct LabeledField<Content: View>: View {
+    let label: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
+            content
+        }
+    }
+}
+
+struct HelpLink: View {
+    let text: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(text)
+                .font(.system(size: 12))
+            Text(detail)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+        }
     }
 }
 

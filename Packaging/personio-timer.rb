@@ -17,10 +17,10 @@ cask "personio-timer" do
   version "1.0.0"
   sha256 "PLACEHOLDER_SHA256_HASH"
 
-  url "https://github.com/YOURUSERNAME/personio-timer/releases/download/v#{version}/PersonioTimer-#{version}.zip"
+  url "https://github.com/timae/Personio-Timer/releases/download/v#{version}/PersonioTimer-#{version}.zip"
   name "PersonioTimer"
   desc "Menubar app for Personio attendance tracking"
-  homepage "https://github.com/YOURUSERNAME/personio-timer"
+  homepage "https://github.com/timae/Personio-Timer"
 
   # Requires macOS 13.0 (Ventura) or later
   depends_on macos: ">= :ventura"

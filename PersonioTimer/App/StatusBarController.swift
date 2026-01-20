@@ -205,14 +205,28 @@ final class StatusBarController {
     private func updateStatusBarTitle() {
         guard let button = statusItem_button else { return }
 
-        if attendanceService.isRunning && LocalStateStore.shared.showTimerInMenubar {
-            let duration = attendanceService.runningDuration
+        let showTimer = LocalStateStore.shared.showTimerInMenubar
+        let displayMode = LocalStateStore.shared.menubarDisplayMode
+
+        if attendanceService.isRunning && showTimer {
+            let duration: TimeInterval
+            switch displayMode {
+            case .currentSession:
+                duration = attendanceService.runningDuration
+            case .todayTotal:
+                duration = attendanceService.todayTotal + attendanceService.runningDuration
+            }
             let timeString = TimeUtils.formatDurationShort(seconds: duration)
             button.title = " \(timeString)"
             button.image = NSImage(systemSymbolName: "clock.fill", accessibilityDescription: "Tracking")
         } else if attendanceService.isRunning {
             button.title = ""
             button.image = NSImage(systemSymbolName: "clock.fill", accessibilityDescription: "Tracking")
+        } else if showTimer && displayMode == .todayTotal && attendanceService.todayTotal > 0 {
+            // Show today's total even when not tracking
+            let timeString = TimeUtils.formatDurationShort(seconds: attendanceService.todayTotal)
+            button.title = " \(timeString)"
+            button.image = NSImage(systemSymbolName: "clock", accessibilityDescription: "Personio Timer")
         } else {
             button.title = ""
             button.image = NSImage(systemSymbolName: "clock", accessibilityDescription: "Personio Timer")

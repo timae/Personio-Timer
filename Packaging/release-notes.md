@@ -10,8 +10,10 @@ Initial release of PersonioTimer.
 - **Start/Stop Tracking**: One-click attendance tracking via Personio API
 - **Timer Display**: Optional live timer showing current session duration
 - **Today's Total**: View total tracked time for today
+- **Status Indicator**: Shows configuration state and errors in menu
+- **Connection Test**: Validate API credentials before saving
 - **State Recovery**: Automatically resumes tracking after app restart
-- **Midnight Handling**: Auto-stops at midnight to prevent cross-day entries
+- **Auto Setup**: Opens preferences on first launch if not configured
 - **Secure Storage**: API credentials stored in macOS Keychain
 
 ### Requirements
@@ -26,6 +28,7 @@ Initial release of PersonioTimer.
 - Single-user only (tracks for one employee ID)
 - Requires manual employee ID entry (no automatic lookup)
 - Break time must be entered manually in Personio web interface
+- Attendance entries should not span midnight (stop before midnight, start again after)
 
 ### Building from Source
 
