@@ -189,7 +189,7 @@ final class AttendanceService: ObservableObject {
 
     // MARK: - Sync Today's Total
 
-    /// Fetches and updates today's total tracked time.
+    /// Fetches and updates today's total tracked time from ALL entries (including web UI).
     func syncTodayTotal() async {
         guard let employeeId = stateStore.employeeId else {
             todayTotal = 0
@@ -198,9 +198,17 @@ final class AttendanceService: ObservableObject {
 
         do {
             let attendances = try await api.getTodayAttendances(employeeId: employeeId)
-            let totalMinutes = attendances.reduce(0) { $0 + $1.durationMinutes }
+
+            // Sum duration of all COMPLETED entries (open entries have 0 duration)
+            var totalMinutes = 0
+            for attendance in attendances {
+                let mins = attendance.durationMinutes
+                logger.debug("Entry \(attendance.id): \(attendance.attributes.startTime)-\(attendance.attributes.endTime ?? "open") = \(mins) min")
+                totalMinutes += mins
+            }
+
             todayTotal = TimeInterval(totalMinutes * 60)
-            logger.debug("Today's total: \(totalMinutes) minutes")
+            logger.info("Synced today's total: \(totalMinutes) minutes from \(attendances.count) entries")
         } catch {
             logger.error("Failed to sync today's total: \(error.localizedDescription)")
         }

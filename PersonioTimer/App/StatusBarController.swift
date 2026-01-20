@@ -133,6 +133,7 @@ final class StatusBarController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] total in
                 self?.updateTodayTotal(total)
+                self?.updateStatusBarTitle()  // Also update menubar when total changes
             }
             .store(in: &cancellables)
 
